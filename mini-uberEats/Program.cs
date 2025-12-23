@@ -1,35 +1,48 @@
 using Microsoft.EntityFrameworkCore;
 using mini_uberEats.Infrastructure;
-// using ReadModel.Worker; // keep commented — we register via bridge
+using ReadModel.Worker;
+using MassTransit;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add services to the container
 builder.Services.AddControllers();
-
-// Swagger UI (Swashbuckle)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// EF Core + SQLite
+// Database contexts
 builder.Services.AddDbContext<OrdersDbContext>(options =>
     options.UseSqlite("Data Source=orders.db"));
 
-// Register ReadModel DbContext
-builder.Services.AddDbContext<ReadModel.Worker.ReadDbContext>(options =>
+builder.Services.AddDbContext<ReadDbContext>(options =>
     options.UseSqlite("Data Source=readmodel.db"));
+
+
+builder.Services.AddMassTransit(x =>
+{
+    x.UsingRabbitMq((ctx, cfg) =>
+    {
+        cfg.Host("localhost", "/", h =>
+        {
+            h.Username("guest");
+            h.Password("guest");
+        });
+    });
+});
 
 var app = builder.Build();
 
-// Ensure DB created (dev)
+// Ensure databases are created
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<OrdersDbContext>();
-    db.Database.EnsureCreated();
-
-    var readDb = scope.ServiceProvider.GetService<ReadModel.Worker.ReadDbContext>();
-    readDb?.Database.EnsureCreated();
+    var ordersDb = scope.ServiceProvider.GetRequiredService<OrdersDbContext>();
+    var readDb = scope.ServiceProvider.GetRequiredService<ReadDbContext>();
+    
+    await ordersDb.Database.EnsureCreatedAsync();
+    await readDb.Database.EnsureCreatedAsync();
 }
 
+// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

@@ -1,0 +1,12 @@
+# Build and user files
+bin/
+obj/
+.vs/
+
+# SQLite local DB files
+*.db
+*.db-wal
+*.db-shm
+
+# Rider/IDE files
+/.idea/

@@ -1,0 +1,6 @@
+@mini_uberEats_HostAddress = http://localhost:5154
+
+GET {{mini_uberEats_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

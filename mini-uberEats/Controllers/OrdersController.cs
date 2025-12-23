@@ -2,6 +2,8 @@
 using mini_uberEats.Domain;
 using mini_uberEats.Infrastructure;
 using ReadModel.Worker;
+using MassTransit; 
+using Contracts.Events; 
 
 namespace mini_uberEats.Controllers;
 
@@ -11,11 +13,13 @@ public class OrdersController : ControllerBase
 {
     private readonly OrdersDbContext _db;
     private readonly ReadDbContext _readDb;
+    private readonly IPublishEndpoint _publisher; 
 
-    public OrdersController(OrdersDbContext db, ReadDbContext readDb)
+    public OrdersController(OrdersDbContext db, ReadDbContext readDb, IPublishEndpoint publisher) // ✅ הוסף פרמטר
     {
         _db = db;
         _readDb = readDb;
+        _publisher = publisher; 
     }
 
     [HttpPost]
@@ -31,6 +35,15 @@ public class OrdersController : ControllerBase
 
         _db.Orders.Add(order);
         await _db.SaveChangesAsync();
+
+       
+        await _publisher.Publish(new OrderCreated
+        {
+            OrderId = order.Id,
+            CustomerName = order.CustomerName,
+            TotalAmount = order.TotalAmount,
+            CreatedAt = order.CreatedAt
+        });
 
         return Ok(new { orderId = order.Id });
     }
